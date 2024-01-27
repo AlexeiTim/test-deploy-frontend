@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
 import axios from 'axios'
 
 function testClick() {
-  const { data } = axios.get('https://test-deploy-backend-62zx.vercel.app/api/todos')
-  console.log(data);
+  const response = axios.get('https://test-deploy-backend-62zx.vercel.app/api/todos')
+  console.log(response);
 }
 </script>
 
