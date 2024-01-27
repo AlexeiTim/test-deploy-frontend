@@ -1,15 +1,33 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import axios from 'axios'
 
-function testClick() {
-  const response = axios.get('https://test-deploy-backend-62zx.vercel.app/api/todos')
-  console.log(response);
+interface Todo {
+  id: number
+  title: string
+}
+const todos = ref<Todo[]>([])
+
+async function testClick() {
+  const { data } = await axios.get<Todo[]>('https://test-deploy-backend-62zx.vercel.app/api/todos')
+  todos.value = data
+}
+
+function clearTodos() {
+  todos.value = []
 }
 </script>
 
 <template>
-  <button @click="testClick">Click me!</button>
-  <RouterView />
+  <div>
+    <button @click="testClick">Get todos!</button>
+    <button @click="clearTodos">Clear Todos!</button>
+    <div v-for="todo in todos" :key="todo.id" style="border:1px solid black; margin-bottom: 10px;">
+      <div>ID: {{ todo.id }}</div>
+      <div>TITLE: {{ todo.title }}</div>
+    </div>
+    <RouterView />
+  </div>
 </template>
 
 <style scoped>
