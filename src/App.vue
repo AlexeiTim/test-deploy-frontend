@@ -30,7 +30,7 @@ function clearTodos() {
 }
 
 function handleSendMessage() {
-  socket.emit('message', {message: 'hello'}, (response) => {
+  socket.emit('message', {message: 'hello'}, (response: string) => {
     console.log(response, 'response')
   })
 }
