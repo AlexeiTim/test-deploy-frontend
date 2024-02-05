@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import axios from 'axios'
 import { io } from 'socket.io-client'
 
-const socket = io('http://0.0.0.0:8080')
+const socket = io('https://test-deploy-backend-62zx.vercel.app')
 
 socket.on('connect', () => {
   console.log('connect')
