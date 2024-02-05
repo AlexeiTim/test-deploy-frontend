@@ -1,6 +1,18 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import axios from 'axios'
+import { io } from 'socket.io-client'
+
+const socket = io('http://0.0.0.0:8080')
+
+socket.on('connect', () => {
+  console.log('connect')
+})
+
+socket.on('new_message', (data) => {
+  console.log(data, 'on')
+})
+
 
 interface Todo {
   id: number
@@ -16,10 +28,17 @@ async function testClick() {
 function clearTodos() {
   todos.value = []
 }
+
+function handleSendMessage() {
+  socket.emit('message', {message: 'hello'}, (response) => {
+    console.log(response, 'response')
+  })
+}
 </script>
 
 <template>
   <div>
+    <button @click="handleSendMessage">Send message</button>
     <button @click="testClick">Get todos!</button>
     <button @click="clearTodos">Clear Todos!</button>
     <div v-for="todo in todos" :key="todo.id" style="border:1px solid black; margin-bottom: 10px;">
