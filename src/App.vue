@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import axios from 'axios'
 import { io } from 'socket.io-client'
 let token = localStorage.getItem('token')
@@ -7,7 +7,7 @@ console.log(token)
 const socket = io('ws://test-deploy-backend-rouge.vercel.app/', {
   transports: ['websocket']
 })
-
+console.log('init connect ws')
 socket.on('connect', () => {
   console.log('connect')
 })
@@ -43,6 +43,10 @@ function clearTodos() {
 function handleSendMessage() {
   socket.emit('message', {message: 'hello'})
 }
+
+onMounted(() => {
+
+})
 </script>
 
 <template>
