@@ -4,7 +4,7 @@ import axios from 'axios'
 import { io } from 'socket.io-client'
 let token = localStorage.getItem('token')
 console.log(token)
-const socket = io('ws://127.0.0.1:8000/', {
+const socket = io('ws://test-deploy-backend-rouge.vercel.app/', {
   transports: ['websocket']
 })
 
