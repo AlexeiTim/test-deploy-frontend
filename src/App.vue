@@ -4,13 +4,15 @@ import axios from 'axios'
 import { io } from 'socket.io-client'
 let token = localStorage.getItem('token')
 console.log(token)
-const socket = io('ws://test-deploy-backend-rouge.vercel.app/')
+const socket = io('ws://127.0.0.1:8000/', {
+  transports: ['websocket']
+})
 
 socket.on('connect', () => {
   console.log('connect')
 })
 
-socket.on('new_message', (data) => {
+socket.on('new-message', (data) => {
   console.log(data, 'on')
 })
 
@@ -31,9 +33,7 @@ function clearTodos() {
 }
 
 function handleSendMessage() {
-  socket.emit('message', {message: 'hello'}, (response: string) => {
-    console.log(response, 'response')
-  })
+  socket.emit('message', {message: 'hello'})
 }
 </script>
 
