@@ -2,8 +2,9 @@
 import { ref } from 'vue'
 import axios from 'axios'
 import { io } from 'socket.io-client'
-
-const socket = io('https://test-deploy-backend-rouge.vercel.app')
+let token = localStorage.getItem('token')
+console.log(token)
+const socket = io('ws://test-deploy-backend-rouge.vercel.app/')
 
 socket.on('connect', () => {
   console.log('connect')
