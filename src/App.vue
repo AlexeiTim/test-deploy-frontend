@@ -4,6 +4,22 @@ import axios from 'axios'
 import { io } from 'socket.io-client'
 let token = localStorage.getItem('token')
 console.log(token)
+const mysocket = new WebSocket('wss://test-deploy-backend-rouge.vercel.app/ws/')
+
+mysocket.onopen = function(e) {
+  mysocket.send(JSON.stringify({
+    message: 'Hello from client'
+  }))
+}
+
+mysocket.onmessage = function(e) {
+  try {
+    console.log(e)
+  } catch (e) {
+    console.log(e)
+  }
+}
+
 const socket = io('wss://test-deploy-backend-rouge.vercel.app/', {
   transports: ['websocket']
 })
