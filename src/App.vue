@@ -13,8 +13,15 @@ socket.on('connect', () => {
 })
 
 socket.on('new-message', (data) => {
-  console.log(data, 'on')
+  showMessageFromServer(data)
 })
+
+function showMessageFromServer(data:any) {
+  message.value = data
+  setTimeout(() => {
+    message.value = ''
+  }, 1000)
+}
 
 
 interface Todo {
@@ -22,6 +29,7 @@ interface Todo {
   title: string
 }
 const todos = ref<Todo[]>([])
+const message = ref('')
 
 async function testClick() {
   const { data } = await axios.get<Todo[]>('https://test-deploy-backend-62zx.vercel.app/api/todos')
@@ -42,6 +50,7 @@ function handleSendMessage() {
     <button @click="handleSendMessage">Send message</button>
     <button @click="testClick">Get todos!</button>
     <button @click="clearTodos">Clear Todos!</button>
+    <div>тут будет сообщение: {{message}}</div>
     <div v-for="todo in todos" :key="todo.id" style="border:1px solid black; margin-bottom: 10px;">
       <div>ID: {{ todo.id }}</div>
       <div>TITLE: {{ todo.title }}</div>
