@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { createClient, type PostgrestResponse } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 import { onMounted, reactive, ref } from 'vue'
 import axios from 'axios'
 
@@ -30,11 +30,9 @@ const sendMessage = async () => {
   if (!newMessage.value.name || !newMessage.value.description) return
   try {
     state.loading = true
-    const { data, error } = await supabaseClient
+    await supabaseClient
       .from('posts')
       .insert(newMessage.value)
-    console.log(data, error, 'response')
-    // await fetchMessages()
   } catch (e) {
     console.log('Error: ', e)
   } finally {
@@ -46,7 +44,7 @@ const sendMessage = async () => {
 const fetchMessages = async () => {
   try {
     state.loading = true
-    const { data }: PostgrestResponse<Post> = await supabaseClient
+    const { data } = await supabaseClient
       .from('posts')
       .select('*')
     if (data) messages.value = [...data]
@@ -56,19 +54,18 @@ const fetchMessages = async () => {
   }
 }
 
-function observerPosts(data) {
-  console.log('new data',data)
+function observerPosts(payload: any) {
+  messages.value.push(payload.new)
 }
-
 function listenInsertPost() {
   supabaseClient
     .channel('posts')
-    .on('postgres_changes', { event: 'INSERT', shema: 'public', table: 'posts' }, observerPosts)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, observerPosts)
     .subscribe()
 }
 
 onMounted(async () => {
-  await listenInsertPost()
+  listenInsertPost()
   await fetchMessages()
 })
 
