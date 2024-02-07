@@ -1,49 +1,82 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { createClient, type PostgrestResponse } from '@supabase/supabase-js'
+import { onMounted, reactive, ref } from 'vue'
 import axios from 'axios'
-import { io } from 'socket.io-client'
-let token = localStorage.getItem('token')
-console.log(token)
-const mysocket = new WebSocket('wss://test-deploy-backend-rouge.vercel.app/ws/')
 
-mysocket.onopen = function(e) {
-  mysocket.send(JSON.stringify({
-    message: 'Hello from client'
-  }))
+interface Post {
+  id: number
+  created_at: string
+  name: string
+  description: string
 }
 
-mysocket.onmessage = function(e) {
+const supabaseClient = createClient('https://hnfhoxgvhdxicrmypedy.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuZmhveGd2aGR4aWNybXlwZWR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDYzNzQ0MzksImV4cCI6MjAyMTk1MDQzOX0.Qmi3G2ynrIDCB9SKqHHIVmiEO3BQKtPqi_wP864sTLA')
+
+
+const state = reactive({
+  loading: false,
+  disabled: false,
+  error: undefined
+})
+const messages = ref<Post[]>([])
+type NewMessage = Pick<Post, 'name' | 'description'>
+const newMessage = ref<NewMessage>({
+  name: '',
+  description: ''
+})
+
+const sendMessage = async () => {
+  console.log('send message')
+  if (!newMessage.value.name || !newMessage.value.description) return
   try {
-    console.log(e)
+    state.loading = true
+    const { data, error } = await supabaseClient
+      .from('posts')
+      .insert(newMessage.value)
+    console.log(data, error, 'response')
+    // await fetchMessages()
+  } catch (e) {
+    console.log('Error: ', e)
+  } finally {
+    state.loading = false
+  }
+}
+
+
+const fetchMessages = async () => {
+  try {
+    state.loading = true
+    const { data }: PostgrestResponse<Post> = await supabaseClient
+      .from('posts')
+      .select('*')
+    if (data) messages.value = [...data]
+    console.log(data)
   } catch (e) {
     console.log(e)
   }
 }
 
-const socket = io('wss://test-deploy-backend-rouge.vercel.app/', {
-  transports: ['websocket']
-})
-console.log('init connect ws')
-socket.on('connect', () => {
-  console.log('connect')
-})
-
-socket.on('new-message', (data) => {
-  showMessageFromServer(data)
-})
-
-function showMessageFromServer(data:any) {
-  message.value = data
-  setTimeout(() => {
-    message.value = ''
-  }, 1000)
+function observerPosts(data) {
+  console.log('new data',data)
 }
 
+function listenInsertPost() {
+  supabaseClient
+    .channel('posts')
+    .on('postgres_changes', { event: 'INSERT', shema: 'public', table: 'posts' }, observerPosts)
+    .subscribe()
+}
+
+onMounted(async () => {
+  await listenInsertPost()
+  await fetchMessages()
+})
 
 interface Todo {
   id: number
   title: string
 }
+
 const todos = ref<Todo[]>([])
 const message = ref('')
 
@@ -57,7 +90,7 @@ function clearTodos() {
 }
 
 function handleSendMessage() {
-  socket.emit('message', {message: 'hello'})
+  // socket.emit('message', {message: 'hello'})
 }
 
 onMounted(() => {
@@ -67,10 +100,23 @@ onMounted(() => {
 
 <template>
   <div>
+    <div>
+      <label>Create message</label>
+      <input v-model="newMessage.name" />
+      <input v-model="newMessage.description" />
+      <button @click="sendMessage">Send message</button>
+    </div>
+    <div>
+      <h2>Messages</h2>
+      <div style="border: 1px solid black; padding: 4px" v-for="message in messages" :key="message.id">
+        <p>Name: {{ message.name }}</p>
+        <p>Description: {{ message.description }}</p>
+      </div>
+    </div>
     <button @click="handleSendMessage">Send message</button>
     <button @click="testClick">Get todos!</button>
     <button @click="clearTodos">Clear Todos!</button>
-    <div>тут будет сообщение: {{message}}</div>
+    <div>тут будет сообщение: {{ message }}</div>
     <div v-for="todo in todos" :key="todo.id" style="border:1px solid black; margin-bottom: 10px;">
       <div>ID: {{ todo.id }}</div>
       <div>TITLE: {{ todo.title }}</div>
