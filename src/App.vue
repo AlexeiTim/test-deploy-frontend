@@ -1,80 +1,6 @@
 <script setup lang="ts">
-import { createClient } from '@supabase/supabase-js'
-import { onMounted, reactive, ref } from 'vue'
-import axios from 'axios'
-
-interface MyEvent {
-  [key: string]: Function[]
-}
-
-class MyWebSocket {
-  events: MyEvent
-
-  constructor() {
-    this.events = {}
-  }
-
-  on(event: string, cb: Function) {
-    console.log('subscribe on :', event, cb)
-    this.supabaseListen(event, (data: any) => {
-      cb((data.new[event]))
-    })
-    // this.supabaseListen(event, cb)
-    // if (!this.events[event]) this.events[event] = []
-    // this.events[event].push(() => () => {
-    //   console.log('event from cb :', event)
-    // })
-  }
-
-  async send(event: string, payload: any) {
-    await this.supabaseSend(event, payload)
-    // for (const type of this.events[event])
-    //   console.log('send :', event, type)
-      //
-  }
-
-  async supabaseSend(event: string, data: any) {
-    console.log('supabase send :', event, data)
-    await supabaseClient
-      .from(event)
-      .insert(data)
-  }
-
-  supabaseListen(event: string, cb: Function) {
-    console.log('supabase listen :', JSON.stringify({ event, cb }))
-    return supabaseClient
-      .channel(event)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: event }, (data) => {
-        console.log('supabaseListen callback :', event)
-        cb(data)
-      })
-      .subscribe()
-  }
-}
-
-
-function listenInsertLocalDescription() {
-  console.log('listen insert local description')
-  // supabaseClient
-  //   .channel('local_description')
-  //   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'local_description' }, observerLocalDescription)
-  //   .subscribe()
-}
-
-function observerLocalDescription(data: any) {
-  console.log(JSON.parse(data.new.description), 'observerLocalDescription')
-}
-
-async function insertLocalDescription(localDescription: any) {
-  console.log(localDescription, 'insertLocalDescription')
-  // await supabaseClient
-  //   .from('local_description')
-  //   .insert({
-  //     description: JSON.stringify(localDescription)
-  //   })
-}
-
-const websocket: MyWebSocket = new MyWebSocket()
+import { io } from 'socket.io-client'
+import { ref } from 'vue'
 
 interface Post {
   id: number
@@ -83,212 +9,194 @@ interface Post {
   description: string
 }
 
-const supabaseClient = createClient('https://hnfhoxgvhdxicrmypedy.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuZmhveGd2aGR4aWNybXlwZWR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDYzNzQ0MzksImV4cCI6MjAyMTk1MDQzOX0.Qmi3G2ynrIDCB9SKqHHIVmiEO3BQKtPqi_wP864sTLA')
+const messages = ref([])
 
+const sendMessage = () => {
+  const newMessage = {
+    text: 'Hello from client!!!' + ' ' + Date.now()
+  }
+  socket.emit('new-message', newMessage)
+}
 
-const state = reactive({
-  loading: false,
-  disabled: false,
-  error: undefined
+const socket = io('ws://127.0.0.1:8000/', {
+  transports: ['websocket']
 })
-const messages = ref<Post[]>([])
-type NewMessage = Pick<Post, 'name' | 'description'>
-const newMessage = ref<NewMessage>({
-  name: '',
-  description: ''
-})
-
-const sendMessage = async () => {
-  console.log('send message to db')
-  // if (!newMessage.value.name || !newMessage.value.description) return
-  // try {
-  //   state.loading = true
-  //   await supabaseClient
-  //     .from('posts')
-  //     .insert(newMessage.value)
-  // } catch (e) {
-  //   console.log('Error: ', e)
-  // } finally {
-  //   state.loading = false
-  // }
-}
-
-const fetchMessages = async () => {
-  console.log('fetch messages from db')
-  // try {
-  //   state.loading = true
-  //   const { data } = await supabaseClient
-  //     .from('posts')
-  //     .select('*')
-  //   if (data) messages.value = [...data]
-  // } catch (e) {
-  //   console.log(e)
-  // }
-}
-
-function observerPosts(payload: any) {
-  messages.value.push(payload.new)
-}
-
-function listenInsertPost() {
-  console.log('listen insert Post')
-  // supabaseClient
-  //   .channel('posts')
-  //   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, observerPosts)
-  //   .subscribe()
-}
-
-
-onMounted(async () => {
-  listenInsertLocalDescription()
-  listenInsertPost()
-  await fetchMessages()
+socket.on('connect', () => {
+  console.log('socket connect')
 })
 
-interface Todo {
-  id: number
-  title: string
-}
+socket.on('new-message', (data) => {
+  messages.value.push(data)
+  console.log('nget by socket ew-message', data)
+})
 
-const todos = ref<Todo[]>([])
-const message = ref('')
-
-async function testClick() {
-  const { data } = await axios.get<Todo[]>('https://test-deploy-backend-62zx.vercel.app/api/todos')
-  todos.value = data
-}
-
-function clearTodos() {
-  todos.value = []
-}
-
-// interface Consumer {
-//   id: number
-// }
-// const consumers = ref<Consumer[]>([])
-// const videoBlocks = ref([])
-// const myVideoId = ref<Number | null>(null)
-const servers: RTCConfiguration = {
-  iceServers: [{
-    "urls": [
-      "turn:13.250.13.83:3478?transport=udp"
-    ],
-    "username": "YzYNCouZM1mhqhmseWk6",
-    "credential": "YzYNCouZM1mhqhmseWk6"
-  }]
-}
-let localPeerConnection: any, remotePeerConnection: any = null
 const ownerVideo = ref()
 const otherVideo = ref()
 
-async function startMyStream() {
-  console.log('init start my stream')
-  console.log('get user media devices')
+const servers: RTCConfiguration = {
+  iceServers: [
+    {
+      urls: ['stun:stun2.l.google.com:19302']
+    }
+  ]
+  // optional: [],
+  // mandatory: {
+  //   OfferToReceiveAudio: true,
+  //   OfferToReceiveVideo: true
+}
+const offerOptions = {
+  offerToReceiveAudio: true,
+  offerToReceiveVideo: true
+}
+
+let localDescription = null
+let remoteDescription = null
+const userId = Date.now()
+
+async function sendCall() {
   const mediaStream = await navigator.mediaDevices.getUserMedia({
-    video: true,
-    audio: false
+    video: { height: 200, width: 200 },
+    audio: true
   })
-  console.log('set my media sttream to video tag')
   ownerVideo.value.srcObject = mediaStream
-  console.log('get my video track')
-  const ownerVideoTrack = mediaStream.getVideoTracks()[0]
-  console.log('create my LocalPeerConnection')
-  localPeerConnection = new RTCPeerConnection(servers)
-  console.log('add eventlistener on localpeer: icecandidate')
-  localPeerConnection.addEventListener('icecandidate', (event: RTCIceCandidate) => {
-    console.log('call listener localpeer icacandidate')
+  const myTrack = mediaStream.getTracks()[0]
+
+  const localPeerConnection = new RTCPeerConnection(servers)
+
+  localPeerConnection.addEventListener('icecandidate', (event) => {
     if (event.candidate) {
-      console.log('send by websocket local_candidate')
-      websocket.send('local_candidate', {
-        local_candidate: JSON.stringify(event.candidate)
-      })
+      console.log('local-candidate init')
+      socket.emit('local-candidate', event.candidate)
     }
   })
-  websocket.on('remote_candidate', (candidate: any) => {
+
+  socket.on('remote-candidate', (candidate) => {
     localPeerConnection.addIceCandidate(new RTCIceCandidate(candidate))
   })
 
-  websocket.on('remote_description', (description: any) => {
-    localPeerConnection.setRemoteDescription(description)
+  socket.on('remote-description', (data) => {
+    // if (userId == data.userId) return
+    console.log('come remote description :', data.answer)
+    localPeerConnection.setRemoteDescription(data.answer)
   })
-  console.log('add track')
-  localPeerConnection.addTrack(ownerVideoTrack, mediaStream)
-  console.log('create offer')
-  const offer = await localPeerConnection.createOffer()
-  console.log('set local description/offer')
-  localPeerConnection.setLocalDescription(offer)
-  // await websocket.send('local_description', offer)
-  console.log('init websocket send local_description')
-  await websocket.send('local_description', { local_description: JSON.stringify(offer) })
+  console.log(myTrack, mediaStream, 'test traack stream')
+  localPeerConnection.addTrack(myTrack, mediaStream)
+
+  localPeerConnection.createOffer().then((offer) => {
+    localPeerConnection.setLocalDescription(offer)
+    socket.emit('local-description', {
+      userId,
+      offer
+    })
+  })
 }
 
-remotePeerConnection = new RTCPeerConnection(servers)
+const remotePeerConnection = new RTCPeerConnection(servers)
+socket.on('local-description', (data) => {
+  // if (userId == data.userId) return
+  console.log('come local description', data.offer)
+  remotePeerConnection.setRemoteDescription(data.offer)
 
-websocket.on('local_description', async (description: any) => {
-  console.log('on local description :', description)
-  remotePeerConnection.setRemoteDescription(description)
-
-  remotePeerConnection.addEventListener('icecandidate', (event: RTCIceCandidate) => {
-    if (event.candidate) {
-      websocket.send('remote_candidate', {remote_candidate: JSON.stringify(event.candidate)})
+  remotePeerConnection.addEventListener('icecandidate', (event) => {
+    if (event.cancelable) {
+      socket.emit('remote-candidate', event.candidate)
+      console.log('remote candidate', JSON.stringify(event.cancelable))
     }
   })
 
-  websocket.on('local_description', (candidate: RTCIceCandidate) => {
-    remotePeerConnection.addIceCandidate(new RTCIceCandidate(candidate))
-  })
-
-  remotePeerConnection.addEventListener('track', (event: any) => {
+  remotePeerConnection.addEventListener('track', (event) => {
+    console.log('track')
+    console.log(event)
     otherVideo.value.srcObject = event.streams[0]
   })
 
-  const answerDescription = await remotePeerConnection.createAnswer()
-  remotePeerConnection.setLocalDescription(answerDescription)
-  console.log('remote peer send description')
-  await websocket.send('remote_description', { remote_description: JSON.stringify(answerDescription)})
+  socket.on('local-candidate', (candidate) => {
+    remotePeerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+  })
+
+  remotePeerConnection.createAnswer().then((answer) => {
+    remotePeerConnection.setLocalDescription(answer)
+    socket.emit('remote-description', {
+      userId,
+      answer
+    })
+  })
 })
+// const userId = Date.now()
 
+// async function sendCall() {
+//   const myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+//   ownerVideo.value.srcObject = myStream
+//   const myTrack = myStream.getTracks()[0]
 
-function deleteMyVideo() {
-  ownerVideo.value.srcObject = null
-  otherVideo.value.srcObject = null
-}
+//   const peerConnection = new RTCPeerConnection(servers)
+//   peerCondatanection.addEventListener('icecandidate', (e) => console.log(e))
 
-function handleSendMessage() {
-  // socket.emit('message', {message: 'hello'})
-}
+//   socket.on('answer', async (message) => {
+//     if (message.userId == userId) return
+//     const remoteAnswerDescription = new RTCSessionDescription(message.answer)
+//     peerConnection.setRemoteDescription(remoteAnswerDescription)
+//   })
+
+//   const offer = await peerConnection.createOffer()
+//   await peerConnection.setLocalDescription(offer)
+//   localDescription.value =
+//   peerCondatanection.onicecandidate = function (e) {
+//     console.log(e)
+//   }
+
+//   socket.emit('offer', { userId, offer })
+// }
+
+// const peerCondatanection = new RTCPeerConnection(servers)
+// peerCondatanection.addEventListener('icecandidate', (e) => console.log(e))
+// peerCondatanection.addEventListener('track', (e) => console.log(e))
+
+// socket.on('offer', async (message) => {
+//   if (message.userId === userId) return
+
+//   console.log('on offer :', message)
+//   const desc = new RTCSessionDescription(message.offer)
+//   await peerCondatanection.setRemoteDescription(desc)
+//   const answer = await peerCondatanection.createAnswer()
+//   peerCondatanection.setLocalDescription(answer)
+
+//   socket.emit('answer', {
+//     userId,
+//     answer
+//   })
+// })
+// peerCondatanection.addEventListener('icecandidate', (e) => console.log(e))
+// peerCondatanection.addEventListener('track', (e) => console.log(e))
+
+// const localDescription = ref('')
+// const remoteDescription = ref('')
+
+// const localCandidate = ref('')
+// const remoteCandidate = ref('')
 </script>
 
 <template>
   <div>
+    <button @click="sendMessage">Send message</button>
     <div>
-      <label>Create message</label>
-      <input v-model="newMessage.name" />
-      <input v-model="newMessage.description" />
-      <button @click="sendMessage">Send message</button>
+      <div v-for="message in messages" :key="message.text">{{ message.text }}</div>
     </div>
+    <h2>Video call</h2>
+    <button @click="sendCall">Send call</button>
     <div>
-      <h2>Messages</h2>
-      <div style="border: 1px solid black; padding: 4px" v-for="message in messages" :key="message.id">
-        <p>Name: {{ message.name }}</p>
-        <p>Description: {{ message.description }}</p>
-      </div>
+      <h2>Local Description</h2>
+      <p>{{ localDescription }}</p>
     </div>
-    <button @click="testClick">Get todos!</button>
-    <button @click="clearTodos">Clear Todos!</button>
-    <div v-for="todo in todos" :key="todo.id" style="border:1px solid black; margin-bottom: 10px;">
-      <div>ID: {{ todo.id }}</div>
-      <div>TITLE: {{ todo.title }}</div>
-    </div>
+
     <div>
-      <h2>Video call</h2>
-      <button @click="startMyStream">Start video chat</button>
-      <button @click="deleteMyVideo">Out video</button>
-      <div class="video-container" style="display: flex; justify-content: start; flex-wrap: wrap">
-        <video ref="ownerVideo" width="200" height="200" autoplay></video>
-        <video ref="otherVideo" width="200" height="200" autoplay></video>
-        <!--        <video ref="videoBlocks" autoplay :id="String(consumer.id)" v-for="consumer in consumers" height="200" :key="consumer.id"></video>-->
-      </div>
+      <h2>remote Description</h2>
+      <p>{{ remoteDescription }}</p>
+    </div>
+    <div class="video-container" style="display: flex; justify-content: start; flex-wrap: wrap">
+      <video ref="ownerVideo" width="200" height="200" autoplay muted></video>
+      <video ref="otherVideo" width="200" height="200" autoplay muted></video>
+      <!--        <video ref="videoBlocks" autoplay :id="String(consumer.id)" v-for="consumer in consumers" height="200" :key="consumer.id"></video>-->
     </div>
   </div>
 </template>
@@ -311,11 +219,9 @@ nav {
   margin-top: 2rem;
 }
 
-
 nav a.router-link-exact-active:hover {
   background-color: transparent;
 }
-
 
 nav a:first-of-type {
   border: 0;
